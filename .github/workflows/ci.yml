@@ -1,0 +1,66 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.12"]
+        numpy: ["with numpy", "without numpy"]
+    name: py${{ matrix.python }} ${{ matrix.numpy }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: install numpy
+        if: matrix.numpy == 'with numpy'
+        run: python -m pip install --upgrade pip numpy
+      - name: tests
+        run: python -m extrusion_twin.tests
+        env:
+          PYTHONPATH: src
+      - name: the twin runs from the command line
+        run: |
+          python -m extrusion_twin run --sim 600 --csv /tmp/twin_log.csv --corpus /tmp/corpus --quiet
+          test -s /tmp/twin_log.csv
+        env:
+          PYTHONPATH: src
+      - name: score against the simulator's hidden truth
+        if: matrix.numpy == 'with numpy' && matrix.python == '3.12'
+        run: python -m extrusion_twin.validate
+        env:
+          PYTHONPATH: src
+
+  web:
+    runs-on: ubuntu-latest
+    name: static build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: build the console Netlify serves
+        run: python3 tools/build_web.py --out dist
+      - name: every file the page asks for is there
+        run: |
+          for f in index.html browser-api.js twin-worker.js extrusion_twin_bundle.json; do
+            test -s "dist/$f" || { echo "missing dist/$f"; exit 1; }
+          done
+          python3 - <<'PY'
+          import json
+          b = json.load(open("dist/extrusion_twin_bundle.json"))
+          need = {"api.py", "model.py", "run.py", "detectors.py", "estimators.py",
+                  "cores.py", "corpus.py", "io_bus.py", "__init__.py"}
+          missing = need - set(b["files"])
+          assert not missing, f"bundle is missing {missing}"
+          html = open("dist/index.html").read()
+          assert "browser-api.js" in html, "the shim is not wired into the page"
+          print(f"bundle carries {len(b['files'])} modules at version {b['version']}")
+          PY

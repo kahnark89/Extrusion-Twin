@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f4c46'/%3E%3Cpath d='M5 22 L11 16 L15 19 L21 9 L27 14' fill='none' stroke='%23f4f5f3' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>Extrusion line console</title>
+<style>
+  :root{
+    --paper:#f4f5f3; --surface:#ffffff; --ink:#12171a; --muted:#6e7a79;
+    --hair:#e2e6e4; --hair2:#cfd6d3; --pine:#0f4c46; --pine-soft:#e6efed;
+    --cold:#2e5ea8; --warm:#e4a62c; --hot:#c13e29; --good:#2f6b4f;
+    --shadow:0 1px 2px rgba(18,23,26,.05), 0 8px 24px rgba(18,23,26,.05);
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+    font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1;
+    font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 72px}
+
+  .bar{position:sticky;top:0;z-index:20;background:rgba(244,245,243,.92);
+    backdrop-filter:saturate(1.6) blur(10px);border-bottom:1px solid var(--hair)}
+  .bar .wrap{display:flex;align-items:center;gap:18px;padding-top:12px;padding-bottom:12px;flex-wrap:wrap}
+  .mark{font-size:14px;font-weight:640;letter-spacing:-.01em;white-space:nowrap}
+  .mark span{color:var(--muted);font-weight:420}
+  nav{display:flex;gap:2px;order:3;width:100%}
+  @media(min-width:760px){nav{order:0;width:auto;margin-left:4px}}
+  nav button{appearance:none;border:0;background:transparent;color:var(--muted);
+    font:inherit;font-size:13.5px;padding:7px 13px;border-radius:7px;cursor:pointer;flex:1;white-space:nowrap}
+  nav button:hover{color:var(--ink);background:rgba(18,23,26,.04)}
+  nav button[aria-current="true"]{background:var(--surface);color:var(--ink);font-weight:560;
+    box-shadow:0 1px 2px rgba(18,23,26,.06)}
+  .pill{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
+    background:var(--surface);border:1px solid var(--hair);padding:5px 11px;border-radius:999px;white-space:nowrap}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--hair2);flex:none}
+  .dot.run{background:var(--good);animation:pulse 1.8s ease-in-out infinite}
+  .dot.err{background:var(--hot)}
+  .dot.done{background:var(--pine)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @media(prefers-reduced-motion:reduce){.dot.run{animation:none}}
+
+  h1{font-size:31px;font-weight:660;letter-spacing:-.025em;line-height:1.12;margin:22px 0 6px}
+  h2{font-size:15px;font-weight:620;letter-spacing:-.005em;margin:0 0 3px}
+  h3{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 12px}
+  p.lede{color:var(--muted);margin:0 0 20px;max-width:62ch;font-size:14.5px}
+  .sub{color:var(--muted);font-size:13px}
+
+  section.block{background:var(--surface);border:1px solid var(--hair);border-radius:12px;
+    padding:18px 20px;margin:14px 0;box-shadow:var(--shadow)}
+  .split{display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .plots{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:14px 8px 8px;
+    margin:14px 0;box-shadow:var(--shadow);overflow-x:auto}
+  .plots svg{display:block;width:100%;height:auto}
+  @media(max-width:760px){.plots svg{min-width:680px}
+    .plots::after{content:"swipe to see the whole line";display:block;font-size:11px;color:var(--muted);padding:4px 8px 0}}
+
+  .grid{display:grid;gap:14px 20px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+  label.f{display:block}
+  label.f .lab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    font-size:12.5px;font-weight:540;margin-bottom:4px}
+  label.f .unit{color:var(--muted);font-weight:400;font-size:11.5px}
+  label.f .help{display:block;font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.4}
+  input[type=text],input[type=number],select,textarea{width:100%;font:inherit;font-size:14px;color:var(--ink);
+    background:var(--surface);border:1px solid var(--hair2);border-radius:8px;padding:8px 10px}
+  input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,
+  .choice:focus-within{outline:2px solid var(--pine);outline-offset:1px}
+  textarea{resize:vertical;min-height:46px}
+  .choices{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+  .choice{display:block;border:1px solid var(--hair2);border-radius:10px;padding:12px 14px;cursor:pointer;
+    background:var(--surface);position:relative}
+  .choice input{position:absolute;opacity:0;pointer-events:none}
+  .choice b{display:block;font-size:13.5px;font-weight:580}
+  .choice span{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .choice[data-on="1"]{border-color:var(--pine);background:var(--pine-soft)}
+  button.act{appearance:none;border:0;border-radius:9px;background:var(--pine);color:#fff;
+    font:inherit;font-size:14px;font-weight:560;padding:11px 20px;cursor:pointer}
+  button.act:hover{background:#0c3d38}
+  button.act[disabled]{background:var(--hair2);cursor:not-allowed}
+  button.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--hair2)}
+  button.ghost:hover{background:var(--paper)}
+  button.danger{background:var(--hot)}button.danger:hover{background:#a5331f}
+  .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}
+  .note{font-size:12.5px;color:var(--muted)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+    background:var(--paper);border:1px solid var(--hair);border-radius:5px;padding:1px 5px}
+  pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+    background:var(--surface);border:1px solid var(--hair);border-left:3px solid var(--pine);
+    border-radius:8px;padding:11px 13px;overflow-x:auto;margin:0 0 14px}
+
+  .verdict{font-size:27px;font-weight:640;letter-spacing:-.02em;line-height:1.18;margin:18px 0 4px}
+  .verdict.warn{color:var(--hot)}
+  .readings{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin:14px 0}
+  .reading{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:14px 16px;
+    box-shadow:var(--shadow)}
+  .reading b{display:block;font-size:26px;font-weight:640;letter-spacing:-.025em;line-height:1.1}
+  .reading .name{font-size:12.5px;font-weight:540;margin-top:6px}
+  .reading .why{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .conf{display:flex;gap:26px;flex-wrap:wrap;margin:18px 0 6px}
+  .conf div{font-size:12px;color:var(--muted)}
+  .conf .track{width:120px;height:4px;border-radius:2px;background:var(--hair);margin-top:5px}
+  .conf .fill{display:block;height:100%;border-radius:2px;background:var(--good);transition:width .3s ease}
+  .progress{height:3px;background:var(--hair);border-radius:2px;overflow:hidden;margin:16px 0 0}
+  .progress i{display:block;height:100%;background:var(--pine);transition:width .3s ease}
+  .scrub{display:flex;gap:12px;align-items:center;margin:16px 0;flex-wrap:wrap}
+  input[type=range]{flex:1;min-width:170px;accent-color:var(--pine)}
+
+  .case{background:var(--surface);border:1px solid var(--hair);border-left:3px solid var(--hot);
+    border-radius:10px;padding:12px 15px;margin-bottom:9px;box-shadow:var(--shadow)}
+  .case.calm{border-left-color:var(--hair2)}
+  .case .when{font-size:11.5px;color:var(--muted)}
+  .case p{margin:3px 0 0;max-width:72ch}
+  .case .raw{font-size:11.5px;color:var(--muted);margin-top:6px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-word}
+  .case .prior{font-size:12.5px;color:var(--pine);margin-top:6px}
+
+  table.runs{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.runs th{text-align:left;font-weight:540;font-size:12px;color:var(--muted);
+    padding:0 12px 8px 0;border-bottom:1px solid var(--hair)}
+  table.runs td{padding:11px 12px 11px 0;border-bottom:1px solid var(--hair);vertical-align:baseline}
+  table.runs tr:last-child td{border-bottom:0}
+  table.runs button{font-size:13px;padding:6px 12px}
+  .empty-note{color:var(--muted);font-size:13.5px;padding:8px 0}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="wrap">
+  <div class="mark">extrusion line <span>&middot; melt state console</span></div>
+  <nav>
+    <button data-view="setup" aria-current="true">Set up</button>
+    <button data-view="watch">Watch</button>
+    <button data-view="history">Runs</button>
+    <button data-view="cases">Cases</button>
+  </nav>
+  <span class="pill"><i class="dot" id="dot"></i><span id="pill">Idle</span></span>
+</div></div>
+
+<div class="wrap">
+
+<div id="offline" hidden>
+  <h1>The console is not running</h1>
+  <p class="lede">This page can drive the twin, but only when the twin is serving it. Open a terminal in the
+    folder that holds the <code>extrusion_twin</code> folder and run:</p>
+  <pre>python -m extrusion_twin serve</pre>
+  <p class="lede">That starts a small console on your own machine and opens it at
+    <code>http://localhost:8000</code>. Nothing leaves the computer.</p>
+  <section class="block">
+    <h2>Only want to look at a run you already have?</h2>
+    <h3>Load a twin_log.csv from a finished run and scrub through it. No console needed.</h3>
+    <label class="act" style="display:inline-block" tabindex="0">Choose a CSV file<input type="file" id="csvfile" accept=".csv" hidden></label>
+  </section>
+</div>
+
+<div id="view-setup" hidden>
+  <h1>Set up a run</h1>
+  <p class="lede">Choose where the readings come from, then check the machine and compound values.
+    These start as placeholders: right in shape, wrong in size, until you fit them against your own line.</p>
+
+  <section class="block">
+    <h2>Where the readings come from</h2>
+    <h3>The twin only ever reads. It never writes to a controller.</h3>
+    <div class="choices" id="modes"></div>
+    <div id="simopts" style="margin-top:18px"></div>
+    <div id="liveopts" style="margin-top:18px" hidden></div>
+  </section>
+
+  <section class="block">
+    <h2>How the twin thinks</h2>
+    <h3>Neither choice changes the physics, only how it is solved and how it is split up.</h3>
+    <div class="choices" id="archs"></div>
+    <div class="choices" id="ests" style="margin-top:10px"></div>
+    <div class="grid" id="tuning" style="margin-top:18px"></div>
+  </section>
+
+  <section class="block">
+    <h2>The machine</h2>
+    <h3>From nameplates and the screw drawing where you have them, from a reversal test where you do not.</h3>
+    <div class="grid" id="machine"></div>
+  </section>
+
+  <section class="block">
+    <h2>The compound</h2>
+    <h3>How the melt flows, and how fast it uses up its stabilizer.</h3>
+    <div class="grid" id="recipe"></div>
+  </section>
+
+  <div class="actions">
+    <button class="act" id="start">Start the run</button>
+    <button class="act ghost" id="save">Save these settings</button>
+    <span class="note" id="startnote"></span>
+  </div>
+</div>
+
+<div id="view-watch" hidden>
+  <div class="split">
+    <div style="flex:1;min-width:260px">
+      <div class="verdict" id="verdict">Nothing running</div>
+      <div class="sub" id="subverdict">Start a run from the set-up screen, or open a finished one from Runs.</div>
+    </div>
+    <button class="act danger" id="stop" hidden>Stop the run</button>
+  </div>
+  <div class="progress" id="progwrap" hidden><i id="prog" style="width:0"></i></div>
+
+  <div id="results" hidden>
+    <div class="plots"><svg id="profile" viewBox="0 0 900 300" role="img"
+      aria-label="Melt temperature along the line, feed to lip"></svg></div>
+    <div class="plots"><svg id="strip" viewBox="0 0 900 200" role="img"
+      aria-label="Die zones across the sheet, and heater duty gap by zone"></svg></div>
+
+    <div class="readings">
+      <div class="reading"><b id="r-drift">&mdash;</b>
+        <div class="name">Material drift</div>
+        <div class="why">Viscosity against the run this was calibrated on</div></div>
+      <div class="reading"><b id="r-fight">&mdash;</b>
+        <div class="name">Heaters fighting the oil</div>
+        <div class="why" id="r-fightwh">Power spent heating and cooling the same metal</div></div>
+      <div class="reading"><b id="r-deg">&mdash;</b>
+        <div class="name">Stabilizer used</div>
+        <div class="why">Cumulative heat exposure along this melt path</div></div>
+      <div class="reading"><b id="r-drool">&mdash;</b>
+        <div class="name">Drool risk at the lip</div>
+        <div class="why" id="r-lip">Melt against the unheated lip</div></div>
+      <div class="reading" id="feedcard" hidden><b id="r-cram">&mdash;</b>
+        <div class="name">Crammer load</div>
+        <div class="why" id="r-cramwhy">What the feeder is spending to fill the throat</div></div>
+      <div class="reading" id="loopbcard" hidden><b id="r-loopb">&mdash;</b>
+        <div class="name">Barrel loop</div>
+        <div class="why" id="r-loopbwhy">Heat the oil is carrying out of the barrel</div></div>
+      <div class="reading" id="aheadcard" hidden><b id="r-ahead">&mdash;</b>
+        <div class="name" id="r-aheadname">A phase ahead</div>
+        <div class="why" id="r-aheadwhy">Where the melt goes if nothing changes</div></div>
+      <div class="reading" id="loopscard" hidden><b id="r-loops">&mdash;</b>
+        <div class="name">Screw loop</div>
+        <div class="why" id="r-loopswhy">Heat the oil is carrying out of the screw</div></div>
+    </div>
+
+    <div class="conf">
+      <div>Measured, not typed in<span class="track"><i class="fill" id="c-meas"></i></span></div>
+      <div>Model certainty<span class="track"><i class="fill" id="c-model"></i></span></div>
+      <div>Detector conviction<span class="track"><i class="fill" id="c-det"></i></span></div>
+    </div>
+
+    <div class="scrub" id="scrubwrap" hidden>
+      <button class="act ghost" id="play">Play</button>
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Position in the run">
+      <span class="sub" id="clock"></span>
+    </div>
+
+    <h2 style="margin:26px 0 12px">What tripped</h2>
+    <div id="feed"></div>
+  </div>
+</div>
+
+<div id="view-history" hidden>
+  <h1>Runs</h1>
+  <p class="lede">Each run is kept with the settings it used, so two of them can be compared honestly.</p>
+  <section class="block"><div id="runlist" class="empty-note">No runs yet.</div></section>
+</div>
+
+<div id="view-cases" hidden>
+  <h1>Cases</h1>
+  <p class="lede">Every alarm is stored with the residual pattern that produced it. Say what it turned out to be,
+    and the next alarm with a similar pattern arrives carrying your answer.</p>
+  <div id="caselist"></div>
+</div>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const ZONES=["B1","B2","B3","B4","B5","B6","B7","B8","SC1","SC2","AD","D1","D2","D3","D4","D5","D6","D7"];
+const SERIES=11, DIE=7;
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mmss = s => `${Math.floor(s/60)}:${String(Math.round(s%60)).padStart(2,"0")}`;
+
+let DEF=null, online=false, frames=[], idx=0, timer=null;
+let mode="sim", arch="mono", est="fixed", liveMode=false;
+
+function go(v){
+  $$("nav button").forEach(b=>b.setAttribute("aria-current", String(b.dataset.view===v)));
+  ["setup","watch","history","cases"].forEach(k=>$("#view-"+k).hidden = k!==v);
+  if(v==="history") loadRuns();
+  if(v==="cases") loadCases();
+}
+$$("nav button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
+
+function heat(v,lo,hi){
+  const t=Math.max(0,Math.min(1,(v-lo)/Math.max(hi-lo,1e-6)));
+  const st=[[0,[46,94,168]],[.55,[228,166,44]],[1,[193,62,41]]];
+  for(let i=0;i<st.length-1;i++){const[a,ca]=st[i],[b,cb]=st[i+1];
+    if(t<=b){const k=(t-a)/(b-a);return `rgb(${ca.map((c,j)=>Math.round(c+k*(cb[j]-c))).join(",")})`;}}
+  return "rgb(193,62,41)";
+}
+
+function drawProfile(f){
+  const W=900,H=300,L=56,R=76,T=30,B=46;
+  const all=f.T_m.slice(0,SERIES).concat(f.T_b.slice(0,SERIES),[f.T_lip]);
+  const lo=Math.min(...all)-7, hi=Math.max(...all)+7;
+  const xs=i=>L+(W-L-R)*(i/(SERIES-1)), y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let s="";
+  for(let g=0;g<=4;g++){const v=lo+(hi-lo)*g/4;
+    s+=`<line x1="${L}" y1="${y(v)}" x2="${W-R+42}" y2="${y(v)}" stroke="#e2e6e4" stroke-width="1"/>
+        <text x="${L-9}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="#6e7a79">${v.toFixed(0)}</text>`;}
+  s+=`<text x="${L-9}" y="${T-12}" text-anchor="end" font-size="10" fill="#6e7a79">&deg;C</text>`;
+  const band=f.spread.some(v=>v>0.01);
+  if(band){let up="",dn="";
+    for(let i=0;i<SERIES;i++) up+=`${i?"L":"M"}${xs(i)},${y(f.T_m[i]+2*f.spread[i])} `;
+    for(let i=SERIES-1;i>=0;i--) dn+=`L${xs(i)},${y(f.T_m[i]-2*f.spread[i])} `;
+    s+=`<path d="${up}${dn}Z" fill="#c13e29" opacity=".12"/>`;}
+  let metal="",melt="";
+  for(let i=0;i<SERIES;i++){metal+=`${i?"L":"M"}${xs(i)},${y(f.T_b[i])} `; melt+=`${i?"L":"M"}${xs(i)},${y(f.T_m[i])} `;}
+  s+=`<path d="${metal}" fill="none" stroke="#6e7a79" stroke-width="1.5" stroke-dasharray="5 4"/>`;
+  s+=`<path d="${melt}" fill="none" stroke="#12171a" stroke-width="2.5" stroke-linejoin="round"/>`;
+  for(let i=0;i<SERIES;i++){
+    s+=`<circle cx="${xs(i)}" cy="${y(f.T_m[i])}" r="4" fill="${heat(f.T_m[i],lo,hi)}" stroke="#fff" stroke-width="1.5"/>
+        <text x="${xs(i)}" y="${H-24}" text-anchor="middle" font-size="10.5" fill="#6e7a79">${ZONES[i]}</text>`;}
+  const xd=xs(SERIES-1), xl=W-R+36, dm=f.T_m.slice(SERIES).reduce((a,b)=>a+b,0)/DIE;
+  s+=`<path d="M${xd},${y(f.T_m[SERIES-1])} L${(xd+xl)/2},${y(dm)} L${xl},${y(f.T_lip)}" fill="none"
+        stroke="#12171a" stroke-width="2" stroke-dasharray="1 5" stroke-linecap="round"/>
+      <circle cx="${xl}" cy="${y(f.T_lip)}" r="4" fill="${heat(f.T_lip,lo,hi)}" stroke="#fff" stroke-width="1.5"/>
+      <text x="${xl}" y="${H-24}" text-anchor="middle" font-size="10.5" fill="#6e7a79">lip</text>
+      <text x="${(xd+xl)/2}" y="${y(dm)-11}" text-anchor="middle" font-size="10.5" fill="#6e7a79">die ${dm.toFixed(0)}&deg;</text>`;
+  s+=`<text x="${L}" y="${H-7}" font-size="11" fill="#6e7a79">Solid line is the melt, which nothing measures. Dashed is the barrel metal, which is what the controllers see.</text>`;
+  if(band) s+=`<text x="${W-R+42}" y="${T-12}" text-anchor="end" font-size="11" fill="#6e7a79">shaded band is the twin&rsquo;s uncertainty</text>`;
+  $("#profile").innerHTML=s;
+}
+
+function drawStrip(f){
+  const W=900,H=200,L=66,R=46,n=18,w=(W-L-R)/n;
+  const die=f.T_m.slice(SERIES), mean=die.reduce((a,b)=>a+b,0)/DIE;
+  const skew=Math.max(.6,...die.map(v=>Math.abs(v-mean)));
+  const dw=(W-L-R)/DIE, dtop=26, dh=38;
+  let s=`<text x="${L}" y="${dtop-9}" font-size="11.5" fill="#6e7a79">Across the sheet &mdash; each die zone against the die average of ${mean.toFixed(1)} &deg;C</text>`;
+  for(let k=0;k<DIE;k++){
+    const v=die[k]-mean, x=L+k*dw, kk=Math.min(Math.abs(v)/skew,1);
+    const col=v>0?`rgba(193,62,41,${.08+.72*kk})`:`rgba(46,94,168,${.08+.72*kk})`;
+    const dark=kk>.55, fg=dark?"#fff":"#12171a", fg2=dark?"rgba(255,255,255,.85)":"#6e7a79";
+    s+=`<rect x="${x+1.5}" y="${dtop}" width="${dw-3}" height="${dh}" rx="5" fill="${col}" stroke="#e2e6e4"/>
+        <text x="${x+dw/2}" y="${dtop+16}" text-anchor="middle" font-size="12" font-weight="560" fill="${fg}">${die[k].toFixed(1)}</text>
+        <text x="${x+dw/2}" y="${dtop+30}" text-anchor="middle" font-size="10" fill="${fg2}">${ZONES[SERIES+k]} ${v>0?"+":""}${v.toFixed(1)}</text>`;}
+  s+=`<text x="${L-10}" y="${dtop+23}" text-anchor="end" font-size="10.5" fill="#6e7a79">left</text>
+      <text x="${W-R+6}" y="${dtop+23}" font-size="10.5" fill="#6e7a79">right</text>`;
+  const top=dtop+dh+40, h=38, peak=Math.max(.08,...f.e.map(Math.abs));
+  s+=`<text x="${L}" y="${top-9}" font-size="11.5" fill="#6e7a79">Heater duty against what the melt should need &mdash; red is burning more, blue is less, in percent of the band</text>`;
+  for(let i=0;i<n;i++){
+    const v=f.e[i], k=Math.min(Math.abs(v)/peak,1), x=L+i*w;
+    const col=v>0?`rgba(193,62,41,${.09+.78*k})`:`rgba(46,94,168,${.09+.78*k})`;
+    s+=`<rect x="${x+1.5}" y="${top}" width="${w-3}" height="${h}" rx="5" fill="${col}" stroke="#e2e6e4"/>
+        <text x="${x+w/2}" y="${top+h+14}" text-anchor="middle" font-size="10" fill="#6e7a79">${ZONES[i]}</text>
+        <text x="${x+w/2}" y="${top+h+26}" text-anchor="middle" font-size="9.5" fill="${Math.abs(v)>.06?"#c13e29":"#a8b2af"}">${v>0?"+":""}${(v*100).toFixed(0)}</text>`;}
+  $("#strip").innerHTML=s;
+}
+
+const WHERE={
+  downstream:"It started at the feed end and is working its way down the line \u2014 look at material and feed first.",
+  upstream:"It started at the die and is backing up the barrel \u2014 look at back pressure and the screens.",
+  simultaneous:"Everything moved at once, so it did not travel with the melt \u2014 look at electrical, control, or cooling."};
+function humanize(text){
+  const t=String(text); let m;
+  if((m=t.match(/^\[heater\] (\S+) current (\d+)% of duty-expected/)))
+    return `${m[1]} is pulling only ${m[2]}% of the current its duty is calling for. Element or SSR.`;
+  if((m=t.match(/^\[heater\] (\S+) current back to/))) return `${m[1]} is drawing normal current again.`;
+  if((m=t.match(/^\[contact\] (\S+) changing/))) return `${m[1]} is chattering \u2014 opening and closing over and over.`;
+  if((m=t.match(/^\[kappa\] viscosity multiplier ([+-][\d.]+)%/))){const v=parseFloat(m[1]);
+    return `Material is running ${Math.abs(v).toFixed(1)}% ${v>0?"stiffer":"softer"} than the run this was calibrated on. Recipe, plasticizer, or screw wear.`;}
+  if((m=t.match(/^\[feed\] crammer load rising: ([\d.]+) A against a ([\d.]+) A/)))
+    return `The crammer is working harder \u2014 ${m[1]} A against its usual ${m[2]} A. Denser or coarser material is reaching the throat. It will show up in the barrel in a few minutes.`;
+  if((m=t.match(/^\[feed\] crammer load falling: ([\d.]+) A against a ([\d.]+) A/)))
+    return `The crammer is working less \u2014 ${m[1]} A against its usual ${m[2]} A. The throat is starving, or the hopper is running out.`;
+  if(/^\[feed\] crammer load swinging/.test(t))
+    return "The crammer load is swinging without settling. That is bridging or rat-holing in the throat.";
+  if((m=t.match(/^\[loop:(\w+)\] supply drifted up to ([\d.]+) degC/)))
+    return `The ${m[1]} oil is leaving the TCU at ${m[2]} \u00b0C and climbing, but it is still carrying the same heat. The cold side is losing ground \u2014 tower water, the tower fan, or a fouling exchanger.`;
+  if((m=t.match(/^\[loop:(\w+)\] delta up to ([\d.]+) K from ([\d.]+) K, but/)))
+    return `The ${m[1]} loop delta jumped from ${m[3]} to ${m[2]} K with no more heat going into the oil. Less oil is carrying the same watts, so the loop has lost flow \u2014 pump, valve, air lock or strainer.`;
+  if((m=t.match(/^\[loop:(\w+)\] delta up to ([\d.]+) K from ([\d.]+) K/)))
+    return `The ${m[1]} loop is carrying more heat than usual \u2014 delta up from ${m[3]} to ${m[2]} K, and the model agrees it is really there.`;
+  if((m=t.match(/^\[loop:(\w+)\] delta down to ([\d.]+) K from ([\d.]+) K/)))
+    return `The ${m[1]} loop is carrying less heat than usual \u2014 delta down from ${m[3]} to ${m[2]} K.`;
+  if((m=t.match(/^\[drive\] motor turning ([\d.]+) rev per screw rev against ([\d.]+)/)))
+    return `The motor is turning ${m[1]} revs per screw rev where it used to turn ${m[2]}. Something between the motor and the screw is slipping \u2014 coupling, belt, or gearbox.`;
+  if((m=t.match(/^\[horizon\] (\S+) ([+-][\d.]+)(.*?)off its usual ([+-][\d.]+)/))){
+    const up=parseFloat(m[2])>0;
+    const what={T_m_AD:"the melt at the adapter",T_m_barrel:"the melt through the barrel",
+      T_b_barrel:"the barrel metal",T_oil_b:"the barrel oil loop",
+      H_index:"the stabilizer budget",drool_index:"drool at the lip"}[m[1]]||m[1];
+    return `The line is pulling away from where the twin projected it \u2014 ${what} is coming out `
+      + `${up?"higher":"lower"} than predicted, three checks running, by more than this twin's usual error. `
+      + `Something is going on that the model has no term for.`;}
+  if(/^\[cross\]/.test(t)) return "Heater duty and motor load are drifting the same way at once. That combination is a real melt change, not a control artifact.";
+  if((m=t.match(/^\[([^\]]+)\] local (\S+) ([+-][\d.]+)/)))
+    return `${m[2]} is off on its own, burning ${parseFloat(m[3])>0?"more":"less"} heat than the zones around it. Band, SSR, thermocouple, or something cooling that one zone.`;
+  if((m=t.match(/^\[([^\]]+)\] (\w+) ([+-][\d.]+) dir ([+-][\d.]+) (\w+)/))){
+    const up=parseFloat(m[3])>0;
+    const lead={barrel:`The barrel heaters as a group are ${up?"working harder":"working less"} than the melt should need.`,
+      die:`The die zones as a group are ${up?"working harder":"working less"} than the melt should need.`,
+      screen_adapter:`The screen changer and adapter are ${up?"working harder":"working less"} than the melt should need.`,
+      gradient:`The two ends of the barrel are pulling apart \u2014 the ${up?"back half":"front half"} is calling for more heat.`,
+      die_skew:`The die is uneven across the width \u2014 the ${up?"right":"left"} side is calling for more heat than the ${up?"left":"right"}.`
+    }[m[2]] || `${m[2]} is ${up?"above":"below"} where the twin expects it.`;
+    return lead+" "+(WHERE[m[5]]||"");}
+  if(/^\[fault\]|^\[bus\]/.test(t)) return "A controller stopped answering on the bus.";
+  return t;
+}
+
+function render(f){
+  $("#results").hidden=false;
+  const drift=f.verdict!=="holding steady";
+  $("#verdict").textContent = drift ? "Line is "+f.verdict : "Line is holding steady";
+  $("#verdict").classList.toggle("warn",drift);
+  $("#subverdict").textContent = drift
+    ? "Start with the zones marked below, and with the closest earlier case in the list."
+    : `Melt at the adapter ${f.T_m[10].toFixed(1)} \u00b0C. Screw drawing ${f.amps.toFixed(0)} A at ${f.rpm.toFixed(0)} rpm.`;
+  drawProfile(f); drawStrip(f);
+  $("#r-drift").textContent=(f.drift_index>0?"+":"")+(f.drift_index*100).toFixed(1)+"%";
+  $("#r-drift").style.color=Math.abs(f.drift_index)>.05?"var(--hot)":"var(--ink)";
+  $("#r-fight").textContent=f.fight_kW.toFixed(1)+" kW";
+  $("#r-fightwh").textContent=f.fight_kWh?`${f.fight_kWh.toFixed(1)} kWh spent so far this run`
+    :"Power spent heating and cooling the same metal";
+  $("#r-deg").textContent=Math.round(f.H_index).toLocaleString();
+  $("#r-drool").textContent=f.drool_index.toFixed(2);
+  $("#r-lip").textContent=`Lip sitting at ${f.T_lip.toFixed(0)} \u00b0C`;
+  const hasCram = f.crammer_amps !== undefined && f.crammer_amps !== null;
+  $("#feedcard").hidden = !hasCram;
+  if(hasCram){
+    $("#r-cram").textContent=f.crammer_amps.toFixed(1)+" A";
+    const st={denser:"Working harder than usual \u2014 denser feed",
+              starving:"Working less than usual \u2014 throat starving",
+              erratic:"Swinging \u2014 bridging in the throat"}[f.feed_state];
+    $("#r-cram").style.color = st ? "var(--hot)" : "var(--ink)";
+    $("#r-cramwhy").textContent = st ||
+      (f.crammer_rpm!=null ? `Steady at ${f.crammer_rpm.toFixed(0)} rpm` : "What the feeder is spending to fill the throat");
+  }
+  [["measurement","#c-meas"],["model","#c-model"],["detector","#c-det"]].forEach(([k,el])=>{
+    const v=(f.confidence&&f.confidence[k])||0;
+    $(el).style.width=(v*100).toFixed(0)+"%";
+    $(el).style.background = v<.5 ? "var(--warm)" : "var(--good)";});
+  const F=f.forecast;
+  $("#aheadcard").hidden = !F || !F.ahead;
+  if(F && F.ahead){
+    const band=F.total && F.total.T_m_AD, bias=F.bias && F.bias.T_m_AD;
+    $("#r-ahead").textContent = F.ahead.T_m_AD.toFixed(1)+"\u00b0"+(band?" \u00b1"+band.toFixed(1):"");
+    $("#r-aheadname").textContent = "Adapter melt in "+Math.round(F.horizon/60)+" min";
+    $("#r-aheadwhy").textContent = F.n<12
+      ? `Still learning how wrong it is \u2014 ${F.scored} of 12 checks so far`
+      : (`If nothing changes. Measured from ${F.n} past checks`
+         + (bias!=null && Math.abs(bias)>0.3
+            ? `, and it runs ${Math.abs(bias).toFixed(1)}\u00b0 ${bias<0?"cold":"hot"} at this range (not corrected)` : "")
+         + (F.retired ? `. ${F.retired} projections dropped when the line changed` : ""));
+  }
+  const LOOPWHY={cold_side:"Supply drifting up \u2014 the cold side is losing ground",
+    flow_loss:"Delta up with no more heat: the loop has lost flow",
+    load_up:"More heat arriving in the oil than usual",
+    load_down:"Less heat reaching the oil than usual"};
+  [["loop_barrel","#loopbcard","#r-loopb","#r-loopbwhy","barrel"],
+   ["loop_screw","#loopscard","#r-loops","#r-loopswhy","screw"]].forEach(([k,card,val,why])=>{
+    const L=f[k];
+    $(card).hidden = !L;
+    if(!L) return;
+    $(val).textContent = L.kW!=null ? L.kW.toFixed(1)+" kW" : L.dT.toFixed(1)+" K";
+    $(val).style.color = (L.state && L.state!=="normal") ? "var(--hot)" : "var(--ink)";
+    $(why).textContent = LOOPWHY[L.state] ||
+      `${L.supply.toFixed(0)} \u00b0C out, ${L.ret.toFixed(0)} \u00b0C back \u2014 a ${L.dT.toFixed(1)} K delta`;
+  });
+  const feed=(f.alarms||[]).slice().reverse();
+  $("#feed").innerHTML = feed.length ? feed.map(a=>`
+    <div class="case${a.kind==="fault"?" calm":""}">
+      <div class="when">${mmss(a.t)} into the run</div>
+      <p>${esc(humanize(a.text))}</p>
+      ${(a.cases||[]).slice(0,2).map(c=>`<div class="prior">Last time this pattern showed up: ${esc(c.cause)} &mdash; ${esc(c.action)}</div>`).join("")}
+      <div class="raw">${esc(a.text)}</div>
+    </div>`).join("") : `<div class="case calm"><p>Nothing has tripped a detector yet.</p></div>`;
+}
+
+function field(f, path){
+  const isText = typeof f.value === "string";
+  return `<label class="f">
+    <span class="lab"><span>${esc(f.label)}</span><span class="unit">${esc(f.unit||"")}</span></span>
+    <input type="${isText?"text":"number"}" ${f.step?`step="${f.step}"`:""} value="${esc(f.value)}"
+           data-path="${path}" data-key="${esc(f.key)}" data-text="${isText?1:0}">
+    ${f.help?`<span class="help">${esc(f.help)}</span>`:""}
+  </label>`;
+}
+function choiceGroup(el,name,items,current,onPick){
+  el.innerHTML = items.map(i=>`
+    <label class="choice" data-on="${i.v===current?1:0}">
+      <input type="radio" name="${name}" value="${i.v}" ${i.v===current?"checked":""}>
+      <b>${esc(i.label)}</b><span>${esc(i.help)}</span></label>`).join("");
+  el.querySelectorAll("input").forEach(inp=>inp.addEventListener("change",()=>{
+    el.querySelectorAll(".choice").forEach(c=>c.dataset.on=c.querySelector("input").checked?1:0);
+    onPick(inp.value);}));
+}
+function buildSetup(){
+  const canLive = !DEF.env || DEF.env.live !== false;
+  const liveHelp = canLive
+    ? "Poll the 18 controllers over RS-485, plus whatever else is wired. Read-only."
+    : (DEF.env && DEF.env.live_note) || "Not available in this browser.";
+  const modes=[
+    {v:"sim",label:"Simulate the line",help:"A stand-in plant with its own physics and four faults built in. Use this to see how the twin behaves before trusting it."},
+    {v:"live",label:"Read the real line",help:liveHelp}];
+  if(!canLive) mode="sim";
+  choiceGroup($("#modes"),"mode",modes, mode, v=>{
+    if(v==="live" && !canLive){                       // no serial port exists in a browser tab
+      mode="sim";
+      $$('#modes input[value="sim"]').forEach(i=>{i.checked=true; i.dispatchEvent(new Event("change"));});
+      return;}
+    mode=v; $("#simopts").hidden=v!=="sim"; $("#liveopts").hidden=v!=="live";});
+  if(!canLive){
+    const box=$$("#modes .choice")[1];
+    if(box){box.style.opacity=".55"; box.style.cursor="not-allowed";
+      box.querySelector("input").disabled=true;}
+  }
+  $("#simopts").innerHTML=`<div class="grid">
+    <label class="f"><span class="lab"><span>Line time to simulate</span><span class="unit">seconds</span></span>
+      <input type="number" id="o-seconds" value="4200" step="300">
+      <span class="help">4,200 is 70 minutes, long enough for all four built-in faults to show up.</span></label>
+    <label class="f"><span class="lab"><span>Model step</span><span class="unit">seconds</span></span>
+      <input type="number" id="o-dt" value="1" step="0.5">
+      <span class="help">One second matches a real bus sweep.</span></label>
+    <label class="f"><span class="lab"><span>Name this run</span></span>
+      <input type="text" id="o-label" placeholder="baseline before screw change"></label></div>`;
+  $("#liveopts").innerHTML=`<div class="grid">
+    <label class="f"><span class="lab"><span>Where the bus is</span></span>
+      <input type="text" id="o-port" value="COM3">
+      <span class="help">A serial port if the adapter is plugged into this machine
+        (<code>COM3</code>, <code>/dev/ttyUSB0</code>), or a network gateway
+        (<code>rtu://192.168.4.1:8899</code> for a transparent one,
+        <code>tcp://192.168.4.1:502</code> for a real Modbus TCP one).
+        <span id="portlist"></span></span></label>
+    <label class="f"><span class="lab"><span>Station numbers</span></span>
+      <input type="text" id="o-stations" value="1-18">
+      <span class="help">Each controller's STno, in zone order B1 through D7.</span></label>
+    <label class="f"><span class="lab"><span>Parity</span></span>
+      <select id="o-parity"><option value="O">Odd</option><option value="E">Even</option><option value="N">None</option></select>
+      <span class="help">Whatever the controllers' CoM setting says. Ignored on a network gateway,
+        where the gateway holds the serial settings.</span></label>
+    <label class="f"><span class="lab"><span>Run for</span><span class="unit">hours</span></span>
+      <input type="number" id="o-hours" value="8" step="1"></label>
+    <label class="f"><span class="lab"><span>Name this run</span></span>
+      <input type="text" id="o-label2" placeholder="Tuesday day shift"></label></div>
+    <p class="note" style="margin-top:14px">Anything not on the bus can be left at its default. The twin marks every
+      channel with where it came from, and the first confidence bar tells you how much of the picture is measured
+      rather than assumed.</p>`;
+  choiceGroup($("#archs"),"arch",DEF.options.arch,arch,v=>{arch=v;tuning();});
+  choiceGroup($("#ests"),"est",DEF.options.estimator,est,v=>{est=v;tuning();});
+  $("#machine").innerHTML=DEF.machine.map(f=>field(f,"plant")).join("");
+  $("#recipe").innerHTML=DEF.recipe.map(f=>field(f,"recipe")).join("");
+  tuning();
+  fetch("/api/ports").then(r=>r.json()).then(d=>{
+    if(d.ports&&d.ports.length&&$("#portlist"))
+      $("#portlist").textContent="Seen on this machine: "+d.ports.map(p=>p.device).join(", ");
+  }).catch(()=>{});
+}
+function tuning(){
+  let h="";
+  if(arch==="cores") h+=`
+    <label class="f"><span class="lab"><span>Boundary tolerance</span><span class="unit">&deg;C</span></span>
+      <input type="number" id="o-delta" value="3" step="0.1">
+      <span class="help">A section tells the next one its melt temperature only when it has moved this much. Bigger is quieter.</span></label>
+    <label class="f"><span class="lab"><span>Residual tolerance</span></span>
+      <input type="number" id="o-dres" value="0.15" step="0.01">
+      <span class="help">The same idea for residual values. At 0.15 the traffic falls to about four percent of raw.</span></label>`;
+  if(est==="enkf") h+=`
+    <label class="f"><span class="lab"><span>Ensemble size</span></span>
+      <input type="number" id="o-ne" value="24" step="4">
+      <span class="help">More members means a steadier uncertainty band and a slower run. Twenty is usually enough.</span></label>`;
+  h+=`<label class="f"><span class="lab"><span>Run this far ahead</span><span class="unit">seconds</span></span>
+      <input type="number" id="o-horizon" value="0" step="60" min="0">
+      <span class="help">The twin also projects forward this far with no corrections, then scores itself
+        when reality catches up. 0 switches it off. 300&ndash;900 is the useful range; it needs a quiet
+        stretch to learn its own error before it can flag anything.</span></label>
+    <label class="f"><span class="lab"><span>Project every</span><span class="unit">seconds</span></span>
+      <input type="number" id="o-fcevery" value="60" step="30" min="10">
+      <span class="help">More often means a better-calibrated error bar and more work per sweep.</span></label>`;
+  h+=`<label class="f"><span class="lab"><span>Screen refresh</span><span class="unit">steps</span></span>
+      <input type="number" id="o-every" value="10" step="5">
+      <span class="help">How often the picture updates while the run goes. It does not change the result.</span></label>`;
+  $("#tuning").innerHTML=h;
+}
+function collect(){
+  const plant={},recipe={};
+  $$("#machine input,#recipe input").forEach(i=>{
+    const t=(i.dataset.path==="plant")?plant:recipe;
+    t[i.dataset.key]= i.dataset.text==="1" ? i.value : parseFloat(i.value);});
+  const o={mode,arch,estimator:est,config:{plant,recipe},corpus:true,
+           status_every:parseFloat(($("#o-every")||{}).value||10)};
+  if(arch==="cores"){o.delta=parseFloat($("#o-delta").value); o.delta_res=parseFloat($("#o-dres").value);}
+  if(est==="enkf") o.ne=parseFloat($("#o-ne").value);
+  const hz=parseFloat(($("#o-horizon")||{}).value||0);
+  if(hz>0){o.horizon=hz; o.fc_every=parseFloat(($("#o-fcevery")||{}).value||60);}
+  if(mode==="sim"){o.seconds=parseFloat($("#o-seconds").value); o.dt=parseFloat($("#o-dt").value);
+    o.label=$("#o-label").value;}
+  else{
+    const st=$("#o-stations").value.trim(), m=st.match(/^(\d+)\s*-\s*(\d+)$/);
+    o.config.port=$("#o-port").value.trim();
+    o.config.parity=$("#o-parity").value;
+    o.config.stations = m ? Array.from({length:+m[2]-+m[1]+1},(_,i)=>+m[1]+i)
+                          : st.split(/[,\s]+/).filter(Boolean).map(Number);
+    o.hours=parseFloat($("#o-hours").value); o.label=$("#o-label2").value;}
+  return o;
+}
+$("#start").addEventListener("click", async ()=>{
+  $("#start").disabled=true; $("#startnote").textContent="Starting\u2026";
+  try{
+    const r=await (await fetch("/api/run",{method:"POST",body:JSON.stringify(collect())})).json();
+    if(!r.ok){$("#startnote").textContent=r.error; $("#start").disabled=false; return;}
+    $("#startnote").textContent=""; frames=[]; $("#scrubwrap").hidden=true; liveMode=true; go("watch");
+  }catch(e){$("#startnote").textContent="Could not reach the console."; $("#start").disabled=false;}
+});
+$("#stop").addEventListener("click",()=>fetch("/api/stop",{method:"POST"}));
+$("#save").addEventListener("click", async ()=>{
+  const name=prompt("Name for these settings","current line");
+  if(!name) return;
+  await fetch("/api/configs",{method:"POST",body:JSON.stringify({name,config:collect().config})});
+  $("#startnote").textContent=`Saved as "${name}".`;
+});
+
+async function poll(){
+  try{
+    const s=await (await fetch("/api/state")).json();
+    if(!online){
+      DEF = await (await fetch("/api/defaults")).json();
+      buildSetup(); go("setup");                       // only claim we are online once the page is built,
+      online=true; $("#offline").hidden=true;          // otherwise a bad build leaves a blank screen forever
+    }
+    const running=s.status==="running";
+    $("#dot").className="dot"+(running?" run":s.status==="error"?" err":s.status==="done"?" done":"");
+    $("#pill").textContent = running?"Running":s.status==="error"?"Error"
+      :s.status==="done"?"Finished":s.status==="stopped"?"Stopped":"Idle";
+    $("#stop").hidden=!running;
+    $("#start").disabled=running;
+    $("#progwrap").hidden=!running;
+    if(s.status==="error"){$("#startnote").textContent=s.message; liveMode=false;}
+    if(s.snapshot && (running||liveMode)){
+      $("#scrubwrap").hidden=true;
+      $("#prog").style.width=((s.snapshot.progress||0)*100).toFixed(1)+"%";
+      render(s.snapshot);
+      if(!running && s.message) $("#subverdict").textContent="Run finished \u2014 "+s.message;
+    }
+  }catch(e){
+    if(!online){$("#offline").hidden=false;
+      ["setup","watch","history","cases"].forEach(k=>$("#view-"+k).hidden=true);}
+  }
+}
+
+async function loadRuns(){
+  try{
+    const s=await (await fetch("/api/state")).json();
+    const el=$("#runlist");
+    if(!s.runs.length){el.className="empty-note";
+      el.textContent="No runs yet. Set one up and it will appear here."; return;}
+    el.className="";
+    el.innerHTML=`<table class="runs"><thead><tr>
+      <th>Run</th><th>Length</th><th>Setup</th><th>Drift</th><th>Fighting</th><th>Tripped</th><th></th>
+      </tr></thead><tbody>` + s.runs.map(r=>`<tr>
+        <td><b>${esc(r.label||r.id)}</b><div class="sub">${esc(r.when||r.id)}</div></td>
+        <td>${mmss(r.seconds||0)}${r.stopped?'<div class="sub">stopped early</div>':""}</td>
+        <td class="sub">${esc(r.mode)} &middot; ${esc(r.arch)} &middot; ${esc(r.estimator)}</td>
+        <td>${((r.drift_index||0)*100).toFixed(1)}%</td>
+        <td>${(r.fight_kWh||0).toFixed(1)} kWh</td>
+        <td>${(r.alarms||[]).length}</td>
+        <td><button class="act ghost" data-open="${esc(r.id)}">Open</button></td></tr>`).join("")
+      + `</tbody></table>`;
+    $$("#runlist button[data-open]").forEach(b=>b.addEventListener("click",()=>openRun(b.dataset.open)));
+  }catch(e){}
+}
+async function openRun(id){
+  const d=await (await fetch("/api/runs/"+id)).json();
+  if(d.error||!d.csv) return;
+  liveMode=false; loadCSV(d.csv); go("watch");
+}
+
+function loadCSV(text){
+  const rows=text.trim().split(/\r?\n/).map(r=>r.split(","));
+  const head=rows.shift(), col=Object.fromEntries(head.map((h,i)=>[h,i]));
+  const pick=(r,p)=>ZONES.map(z=>parseFloat(r[col[p+z]])||0);
+  const log=[];
+  frames=rows.map(r=>{
+    const dir=parseFloat(r[col.direction_heater])||0;
+    const unex=Math.abs(parseFloat(r[col.unexplained_kW])||0);
+    const drift=parseFloat(r[col.drift_index])||0, spread=pick(r,"sd_");
+    const verdict=(Math.abs(drift)<.03&&unex<8)?"holding steady":"drifting, "+
+      (dir>.3?"downstream-propagating (feed/material side)":dir<-.3?
+       "upstream-propagating (die/back-pressure side)":"simultaneous (electrical/control/cooling side)");
+    const t=parseFloat(r[col.t]);
+    (r[col.alarms]||"").split(" | ").filter(Boolean).forEach(x=>log.push({t,kind:"template",text:x}));
+    return {t,verdict,T_m:pick(r,"Tm_"),T_b:pick(r,"Tb_"),e:pick(r,"e_"),spread,
+      drift_index:drift,fight_kW:parseFloat(r[col.fight_kW])||0,fight_kWh:parseFloat(r[col.fight_kWh])||0,
+      H_index:parseFloat(r[col.H_index])||0,drool_index:parseFloat(r[col.drool_index])||0,
+      T_lip:parseFloat(r[col.T_lip])||0,rpm:parseFloat(r[col.rpm])||0,amps:parseFloat(r[col.amps])||0,
+      crammer_amps: r[col.crammer_amps]===""?null:parseFloat(r[col.crammer_amps]),
+      crammer_rpm: r[col.crammer_rpm]===""?null:parseFloat(r[col.crammer_rpm]),
+      feed_state: r[col.feed_state]||null,
+      loop_barrel: r[col.oil_b_supply]?{supply:+r[col.oil_b_supply],ret:+r[col.oil_b_return],
+        dT:+r[col.oil_b_dT]||0,kW:r[col.oil_b_kW]?+r[col.oil_b_kW]:null,state:r[col.oil_b_state]||null,
+        approach:r[col.oil_b_approach]?+r[col.oil_b_approach]:null}:null,
+      loop_screw: r[col.oil_s_supply]?{supply:+r[col.oil_s_supply],ret:+r[col.oil_s_return],
+        dT:+r[col.oil_s_dT]||0,kW:r[col.oil_s_kW]?+r[col.oil_s_kW]:null,state:r[col.oil_s_state]||null}:null,
+      confidence:{measurement:parseFloat(r[col.meas_live_frac])||0,
+        model:1/(1+spread.reduce((a,b)=>a+b,0)/18), detector:Math.min(unex/20,1)},
+      alarms:log.slice(-12)};});
+  $("#scrubwrap").hidden=false; $("#progwrap").hidden=true;
+  $("#scrub").max=frames.length-1;
+  show(frames.length-1);
+}
+function show(i){
+  idx=Math.max(0,Math.min(frames.length-1,i)); $("#scrub").value=idx;
+  $("#clock").textContent=`${mmss(frames[idx].t)} of ${mmss(frames[frames.length-1].t)}`;
+  render(frames[idx]);
+}
+$("#scrub").addEventListener("input",e=>show(+e.target.value));
+$("#play").addEventListener("click",()=>{
+  if(timer){clearInterval(timer);timer=null;$("#play").textContent="Play";return;}
+  $("#play").textContent="Pause";
+  timer=setInterval(()=>{
+    if(idx>=frames.length-1){clearInterval(timer);timer=null;$("#play").textContent="Play";return;}
+    show(idx+Math.max(1,Math.floor(frames.length/500)));},55);});
+const readFile=fl=>{const r=new FileReader();
+  r.onload=()=>{liveMode=false;loadCSV(r.result);$("#offline").hidden=true;go("watch");};r.readAsText(fl);};
+$("#csvfile").addEventListener("change",e=>{if(e.target.files[0])readFile(e.target.files[0]);});
+["dragover","drop"].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();
+  if(ev==="drop"&&e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);}));
+
+const CHAIN=[["cause","What was actually going on?"],
+  ["intuition","What did you notice before you knew? Sound, smell, a gauge, the sheet, a hunch."],
+  ["action","What did you do?"],["effect","What happened right after?"],
+  ["result","How did it end? Scrap, downtime, recovered, still open."],
+  ["shadow_actions","What else could you have done? Separate with a semicolon."],
+  ["tags","Tags, separated by commas."]];
+async function loadCases(){
+  try{
+    const d=await (await fetch("/api/corpus")).json();
+    const labels=d.labels||{};
+    const todo=d.signatures.filter(s=>!labels[s.id]).reverse();
+    const done=d.signatures.length-todo.length;
+    if(!d.signatures.length){
+      $("#caselist").innerHTML=`<div class="empty-note">No alarms recorded yet. Run the twin and they will collect here.</div>`;
+      return;}
+    $("#caselist").innerHTML=`<p class="sub" style="margin-bottom:14px">${done} answered, ${todo.length} waiting.</p>`
+      + todo.slice(0,25).map(s=>`
+      <div class="case" data-id="${esc(s.id)}">
+        <div class="when">${mmss(s.t)} into run ${esc(s.run_id)}</div>
+        <p>${esc(humanize(s.detector.text))}</p>
+        <div class="raw">${esc(s.detector.text)}</div>
+        <div class="grid" style="margin-top:14px">
+          ${CHAIN.map(([k,q])=>`<label class="f"><span class="lab"><span>${esc(q)}</span></span>
+            <textarea data-f="${k}" rows="1"></textarea></label>`).join("")}
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button class="act" data-save="${esc(s.id)}">Save this answer</button>
+          <span class="note"></span></div>
+      </div>`).join("");
+    $$("#caselist button[data-save]").forEach(b=>b.addEventListener("click",async()=>{
+      const box=b.closest(".case"), body={id:b.dataset.save};
+      box.querySelectorAll("textarea").forEach(t=>{const k=t.dataset.f;
+        body[k]= k==="shadow_actions" ? t.value.split(";").map(x=>x.trim()).filter(Boolean)
+               : k==="tags" ? t.value.split(",").map(x=>x.trim()).filter(Boolean) : t.value;});
+      if(!body.cause){box.querySelector(".note").textContent="Say what it was, at least.";return;}
+      await fetch("/api/corpus/label",{method:"POST",body:JSON.stringify(body)});
+      box.querySelector(".note").textContent="Saved.";
+      b.disabled=true;}));
+  }catch(e){}
+}
+
+poll(); setInterval(poll,1200);
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+Copyright (c) 2026 Kahn Capps. All rights reserved.
+
+This software is not yet released under an open-source licence. No permission is
+granted to copy, modify, distribute or use it except by the copyright holder and
+those he has authorised directly.
+
+Why this file says that rather than naming a licence: the package is the portable
+half of a deliberate three-way split (see "IP separation" in README.md). The physics
+structure, the detector bank and the corpus schema are generalizable expertise and
+are worth licensing on purpose rather than by default. Choosing the licence is a
+decision for the copyright holder, and until it is made the conservative statement
+above is the accurate one.
+
+The plant-specific half -- config.json, fitted constants, station and register maps --
+and the operational half -- twin_log.csv, signatures.jsonl, labels.jsonl -- belong to
+the plant owner and are not covered by this repository at all. Neither is
+committed here, and .gitignore is set up to keep it that way.

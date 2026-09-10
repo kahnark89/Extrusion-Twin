@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "extrusion-twin"
+version = "2.1.0"
+description = "Real-time melt-state digital twin for the 80-inch flexible-PVC sheet line"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Kahn Capps" }]
+keywords = ["extrusion", "digital-twin", "state-estimation", "modbus", "pvc", "ciaer"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Manufacturing",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = []                      # the simulator, the console and the corpus are standard library only
+
+[project.optional-dependencies]
+enkf = ["numpy>=1.21"]                 # only the ensemble Kalman filter needs it
+serial = ["minimalmodbus>=2.0", "pyserial>=3.5"]   # only a cabled RS-485 adapter needs these
+all = ["numpy>=1.21", "minimalmodbus>=2.0", "pyserial>=3.5"]
+
+[project.scripts]
+extrusion-twin = "extrusion_twin.run:main"
+
+[project.urls]
+Homepage = "https://github.com/kahnark89/Extrusion-Twin"
+Source = "https://github.com/kahnark89/Extrusion-Twin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/extrusion_twin"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/extrusion_twin/dashboard.html" = "extrusion_twin/dashboard.html"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/extrusion_twin", "web", "tools", "README.md", "LICENSE", "netlify.toml"]

@@ -1,0 +1,27 @@
+# build output
+dist/
+build/
+*.egg-info/
+
+# what a run produces -- process data, and the plant owner's
+twin_data/
+corpus/
+runs/
+*.csv
+!tests/**/*.csv
+signatures.jsonl
+labels.jsonl
+ciaer_export.jsonl
+status.json
+console_token.txt
+
+# the plant-specific half of the IP split: fitted constants, station map, register addresses
+config.json
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+.idea/
+.vscode/
