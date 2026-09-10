@@ -138,8 +138,8 @@ class TwinRun:
                       "fight_kW", "fight_kWh", "H_index", "drool_index", "T_lip", "T_oil_b", "T_oil_s", "T_screw",
                       "direction_heater", "direction_thermal", "n_events", "r_adapter", "unexplained_kW",
                       "spread_AD", "spread_barrel", "meas_live_frac", "msgs", "raw",
-                      "fc_ahead_AD", "fc_err_AD", "fc_err_barrel", "fc_err_H", "fc_band_AD",
-                      "fc_bias_AD", "fc_scored", "fc_retired", "fc_retired_why"]
+                      "fc_horizon", "fc_ahead_AD", "fc_err_AD", "fc_err_barrel", "fc_err_H",
+                      "fc_band_AD", "fc_bias_AD", "fc_scored", "fc_retired", "fc_retired_why"]
                      + [f"Tm_{z}" for z in ZONE_NAMES] + [f"Tb_{z}" for z in ZONE_NAMES]
                      + [f"e_{z}" for z in ZONE_NAMES] + [f"rq_{z}" for z in ZONE_NAMES] + [f"sd_{z}" for z in ZONE_NAMES]
                      + ["M_cross", "alarms"])
@@ -291,16 +291,18 @@ class TwinRun:
                 + f"  scored={st_['scored']} retired={st_['retired']}")
 
     def _fc_row(self, settled) -> list:
-        """Nine columns describing the phase-ahead layer. Blank when it is switched off, and
-        blank on sweeps where nothing came due -- a settlement is an event, not a reading."""
+        """Ten columns describing the phase-ahead layer. Blank when it is switched off, and
+        blank on sweeps where nothing came due -- a settlement is an event, not a reading.
+        The horizon is carried in the log so a replay can render the panel without being told."""
         if self.fc is None:
-            return [""] * 9
+            return [""] * 10
         st_ = self.fc.state()
         ahead = st_["ahead"]
         scored = next((r for r in settled if r["kind"] == "scored"), None)
         retired = next((r for r in settled if r["kind"] == "retired"), None)
         f2 = lambda v: "" if v is None else f"{v:+.2f}"
         return [
+            f"{self.fc.horizon:.0f}",
             "" if not ahead else f"{ahead['T_m_AD']:.1f}",
             "" if not scored else f"{scored['err']['T_m_AD']:+.2f}",
             "" if not scored else f"{scored['err']['T_m_barrel']:+.2f}",

@@ -615,7 +615,7 @@ def test_forecast():
     p_rows = [r.split(",") for r in open(plain).read().strip().splitlines()]
     head = a_rows[0]
     n_fc = sum(1 for h in head if h.startswith("fc_"))
-    check("the log gains the phase-ahead columns", n_fc == 9, f"{n_fc}")
+    check("the log gains the phase-ahead columns", n_fc == 10, f"{n_fc}")
     # the invariant the whole design rests on: a forecast is scored, never fed back, so every
     # column that existed before the phase-ahead layer must be identical with it switched on
     cut = min(i for i, h in enumerate(head) if h.startswith("fc_"))

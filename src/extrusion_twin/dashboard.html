@@ -700,6 +700,12 @@ function loadCSV(text){
         approach:r[col.oil_b_approach]?+r[col.oil_b_approach]:null}:null,
       loop_screw: r[col.oil_s_supply]?{supply:+r[col.oil_s_supply],ret:+r[col.oil_s_return],
         dT:+r[col.oil_s_dT]||0,kW:r[col.oil_s_kW]?+r[col.oil_s_kW]:null,state:r[col.oil_s_state]||null}:null,
+      forecast: (col.fc_horizon!==undefined && r[col.fc_horizon] && r[col.fc_ahead_AD]) ? {
+        horizon:+r[col.fc_horizon], ahead:{T_m_AD:+r[col.fc_ahead_AD]},
+        total: r[col.fc_band_AD]?{T_m_AD:Math.abs(+r[col.fc_bias_AD]||0)+ +r[col.fc_band_AD]}:null,
+        band: r[col.fc_band_AD]?{T_m_AD:+r[col.fc_band_AD]}:null,
+        bias: r[col.fc_bias_AD]?{T_m_AD:+r[col.fc_bias_AD]}:null,
+        n:+r[col.fc_scored]||0, scored:+r[col.fc_scored]||0, retired:+r[col.fc_retired]||0} : null,
       confidence:{measurement:parseFloat(r[col.meas_live_frac])||0,
         model:1/(1+spread.reduce((a,b)=>a+b,0)/18), detector:Math.min(unex/20,1)},
       alarms:log.slice(-12)};});

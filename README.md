@@ -90,6 +90,22 @@ What Watch shows, in the order it answers questions:
 
 The page also works with no console at all: drop a `twin_log.csv` on it and it replays that run.
 
+## Seeing it work, without installing anything
+
+```
+python3 tools/build_demo.py            # writes demo.html -- one file, open it from disk
+```
+
+A real run recorded into a single self-contained page: seventy minutes of line time, the six
+injected faults, the alarms it raised, and the phase-ahead panel. It is `dashboard.html`
+unmodified with a stub answering the console's own API routes out of the recording, so the
+plots, the scrubber, the plain-language alarms and the Cases screen are the real ones. Labels
+typed on it are kept in the browser. The one thing it cannot do is start a new run, and it
+says so when asked.
+
+Useful for showing somebody the twin before asking them to install Python, and for attaching
+to an email.
+
 ## Hosting it
 
 `python -m extrusion_twin serve` is the local console. The same console also deploys as a static
@@ -250,6 +266,7 @@ first visit. Two independent secrets, because they fail differently.
 | `tests.py` | 128 checks, no external runner |
 | `../../web/` | `browser-api.js` (the fetch shim) and `twin-worker.js` (Pyodide in a module worker) |
 | `../../tools/build_web.py` | assembles `dist/` for a static host; optionally vendors Pyodide |
+| `../../tools/build_demo.py` | records a run into one self-contained `demo.html` |
 
 ## Repository layout
 

@@ -1,5 +1,7 @@
 # build output
 dist/
+demo.html
+.demo_build/
 build/
 *.egg-info/
 
